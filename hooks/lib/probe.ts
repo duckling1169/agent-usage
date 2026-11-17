@@ -125,6 +125,13 @@ async function readWorktree($: Engine, path: string, folder: string, branch: str
   }
 }
 
+/** `ps` elapsed time, `[[dd-]hh:]mm:ss`, in seconds; null when unreadable. */
+export function elapsedSeconds(etime: string): number | null {
+  const m = /^(?:(\d+)-)?(?:(\d+):)?(\d+):(\d+)$/.exec(etime)
+  if (!m) return null
+  return ((Number(m[1] ?? 0) * 24 + Number(m[2] ?? 0)) * 60 + Number(m[3])) * 60 + Number(m[4])
+}
+
 /** Every process with its parent, in one call. */
 export async function listProcesses($: Engine): Promise<Proc[]> {
   if (await isWindows($)) {
@@ -135,14 +142,17 @@ export async function listProcesses($: Engine): Promise<Proc[]> {
     return Array.isArray(parsed) ? parsed : [parsed]
   }
   const now = Date.now()
-  return (await run($, ['ps', '-Ao', 'pid=,ppid=,etimes=,args=']))
+  // `etime` ([[dd-]hh:]mm:ss) works on both macOS and Linux; `etimes` is Linux-only.
+  return (await run($, ['ps', '-Ao', 'pid=,ppid=,etime=,args=']))
     .split('\n')
     .flatMap(line => {
-      const m = /^\s*(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/.exec(line)
+      const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/.exec(line)
       if (!m) return []
+      const seconds = elapsedSeconds(m[3]!)
+      if (seconds === null) return []
       const cmd = m[4]!
       const name = (cmd.split(/\s/)[0] ?? '').split('/').pop() ?? ''
-      return [{ pid: Number(m[1]), ppid: Number(m[2]), name, cmd, startedAt: new Date(now - Number(m[3]) * 1000).toISOString() }]
+      return [{ pid: Number(m[1]), ppid: Number(m[2]), name, cmd, startedAt: new Date(now - seconds * 1000).toISOString() }]
     })
 }
 

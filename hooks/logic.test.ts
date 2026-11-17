@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import type { Agent, Worktree } from '../types'
 import { activityOf, findAgents, layoutFor, parseStatusFiles, parseUsage, parseWorktreeList, verdict, workRows, workSummary } from './lib/logic'
 import type { Proc } from './lib/logic'
+import { elapsedSeconds } from './lib/probe'
 
 const NOW = Date.parse('2026-11-17T22:00:00Z')
 const minutesAgo = (m: number) => new Date(NOW - m * 60000).toISOString()
@@ -107,4 +108,11 @@ test('an agent with no known worktree falls back to its tool’s fresh branch, n
     NOW,
   )
   expect(rows.map(r => [r.name, r.status])).toEqual([['ratings', 'editing']])
+})
+
+test('ps elapsed times parse on macOS and Linux', () => {
+  expect(elapsedSeconds('05:07')).toBe(307)
+  expect(elapsedSeconds('01:02:03')).toBe(3723)
+  expect(elapsedSeconds('2-01:00:00')).toBe(176400)
+  expect(elapsedSeconds('bad')).toBeNull()
 })
