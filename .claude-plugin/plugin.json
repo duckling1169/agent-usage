@@ -1,0 +1,1 @@
+{ "name": "agent-usage", "version": "0.2.0", "description": "A pane showing Codex, Antigravity and Claude quota windows and the worker agents running in this repository's worktrees", "license": "MIT", "types": "./types/index.d.ts" }
